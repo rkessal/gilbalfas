@@ -39,7 +39,6 @@ function waitForImages(container) {
   let rafImageId = null
   const images = Array.from(container.children)
   if (!container.dataset.cloned) {
-    console.log("Cloning images for accurate measurements...")
     images.forEach(img => {
       container.appendChild(img.cloneNode(true))
     })

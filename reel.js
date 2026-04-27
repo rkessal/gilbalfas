@@ -73,11 +73,6 @@ function onLoad() {
   bus.on("video:mount", id => {
     const iframe = getOrCreateIframe()
 
-    console.log('mount', {
-      iframe,
-      gsap
-    })
-
     gsap.set(iframe, {
       clipPath: "inset(0% 0% 0% 0%)",
     })
@@ -119,7 +114,6 @@ function onLoad() {
     idle: {
       enter() {
         bus.emit("page:animate")
-        console.log('idle enter')
       },
       on: { PLAY: "loading" }
     },
