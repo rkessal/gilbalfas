@@ -35,7 +35,7 @@ function createMachine(initial, states, bus) {
   return { send, get state() { return current } }
 }
 
-function waitForImages(container) {
+function waitForImages(container, isMobile) {
   let rafImageId = null
   const images = Array.from(container.children)
   if (!container.dataset.cloned) {
@@ -46,7 +46,9 @@ function waitForImages(container) {
   }
 
   const check = () => {
-    if (container.scrollHeight > 0) {
+    const scrollDistance = isMobile ? container.scrollWidth : container.scrollHeight
+
+    if (scrollDistance > 0) {
       galleryInstance = setupGallery(container)
       cancelAnimationFrame(rafImageId)
       return
@@ -69,7 +71,8 @@ let galleryInstance = null
 
 window.addEventListener('load', async () => {
   const container = document.querySelector('.elementor-gallery__container')
-  waitForImages(container)
+  const isMobile = window.innerWidth <= breakpoints.mobile
+  waitForImages(container, isMobile)
 })
 
 window.addEventListener('resize', debounce(() => {
@@ -84,7 +87,6 @@ function setupGallery(track) {
   const axis = isMobile ? "x" : "y"
   const sizeProp = axis === "x" ? "width" : "height"
   const posProp = axis === "x" ? "left" : "top"
-  const clientProp = axis === "x" ? "clientX" : "clientY"
   const viewportSize = axis === "x"
     ? window.innerWidth
     : document.querySelector('.stills-gallery').offsetHeight
@@ -105,9 +107,12 @@ function setupGallery(track) {
   let targetY = 0
   let velocity = 0
 
+  let touchStartX = 0
   let touchStartY = 0
+  let touchCurrentX = 0
   let touchCurrentY = 0
   let isTouching = false
+  let lockedAxis = null
 
   const inputStrength = 0.07
   const damping = 0.92
@@ -229,7 +234,7 @@ function setupGallery(track) {
               duration: 2.5,
             })
 
-            childDescription.innerHTML = `<p>${newDescription} hello test</p>`
+            childDescription.innerHTML = `<p>${newDescription}</p>`
             testText(childDescription)
           }
         })
@@ -249,23 +254,51 @@ function setupGallery(track) {
 
   function onTouchStart(e) {
     if (window.innerWidth > breakpoints.tablet) return
+
     isTouching = true
-    touchStartY = e.touches[0][clientProp]
+    lockedAxis = null
+
+    touchStartX = e.touches[0].clientX
+    touchStartY = e.touches[0].clientY
+
+    touchCurrentX = touchStartX
     touchCurrentY = touchStartY
   }
 
   function onTouchMove(e) {
     if (!isTouching) return
-    const current = e.touches[0][clientProp]
-    const delta = touchCurrentY - current
-    touchCurrentY = current
-    velocity += delta * inputStrength * 1.2
+
+    const x = e.touches[0].clientX
+    const y = e.touches[0].clientY
+
+    const isMobile = window.innerWidth <= breakpoints.mobile
+
+    if (!lockedAxis) {
+      const dx = Math.abs(x - touchStartX)
+      const dy = Math.abs(y - touchStartY)
+
+      lockedAxis = dx > dy ? "x" : "y"
+
+      if (isMobile) lockedAxis = "x"
+      else lockedAxis = "y"
+    }
+
+    const current = lockedAxis === "x" ? x : y
+    const prev = lockedAxis === "x" ? touchCurrentX : touchCurrentY
+
+    const delta = prev - current
+
+    if (lockedAxis === "x") touchCurrentX = x
+    else touchCurrentY = y
+
+    velocity += delta * inputStrength * 3.2
     machine.send("SCROLL")
   }
 
   function onTouchEnd() {
     if (!isTouching) return
     isTouching = false
+    lockedAxis = null
   }
 
   function testText(text) {
@@ -350,7 +383,6 @@ function setupGallery(track) {
       document.removeEventListener("touchstart", onTouchStart)
       document.removeEventListener("touchmove", onTouchMove)
       document.removeEventListener("touchend", onTouchEnd)
-
     }
   }
 }
