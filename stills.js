@@ -225,17 +225,17 @@ function setupGallery(track) {
               opacity: 1,
               clipPath: 'inset(0% 0% 0% 0%)',
               ease: 'power4.inOut',
-              duration: 2,
+              duration: 1,
             })
 
             gsap.to(newImage, {
               scale: 1,
               ease: 'power4.inOut',
-              duration: 2.5,
+              duration: 1.5,
             })
 
             childDescription.innerHTML = `<p>${newDescription}</p>`
-            testText(childDescription)
+            gsap.to(childDescription, { autoAlpha: 1 })
           }
         })
       }
@@ -299,22 +299,6 @@ function setupGallery(track) {
     if (!isTouching) return
     isTouching = false
     lockedAxis = null
-  }
-
-  function testText(text) {
-    SplitText.create(text, {
-      type: "lines, words",
-      mask: "lines",
-      autoSplit: true,
-      onSplit(self) {
-        return gsap.from(self.lines, {
-          duration: 1,
-          y: 100,
-          autoAlpha: 0,
-          stagger: 0.05
-        });
-      }
-    })
   }
 
   document.addEventListener('wheel', onScroll)
