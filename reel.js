@@ -64,48 +64,49 @@ function onLoad() {
     }, {
       clipPath: 'inset(0%, 100%, 0%, 100%)',
       ease: 'power4.inOut',
-      duration: 2,
+      duration: 1.5,
       autoAlpha: 1,
       stagger: 0.08
     })
   })
 
-  bus.on("video:mount", id => {
-    const iframe = getOrCreateIframe()
+  bus.on("video:mount", link => {
+    const video = getVideo()
 
-    gsap.set(iframe, {
+    gsap.set(video, {
       clipPath: "inset(0% 0% 0% 0%)",
     })
 
-    gsap.to(iframe, {
+    gsap.to(video, {
       clipPath: 'inset(50% 0% 50% 0%)',
       duration: 1.5,
       ease: 'power4.inOut',
       autoAlpha: 0,
       onComplete: () => {
-        iframe.src = ""
-        iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1`
-
-        iframe.onload = () => {
-          machine.send("READY", id)
-        }
+        video.src = ""
+        video.src = link
+        machine.send("READY", link)
       }
     })
   })
 
   bus.on("video:play", id => {
-    const iframe = container.querySelector("iframe")
-    if (!iframe) return
+    const video = container.querySelector("video")
+    console.log({
+      container,
+      video
+    })
+    if (!video) return
 
     window.scrollTo({ top: 0 })
 
-    gsap.fromTo(iframe, {
+    gsap.fromTo(video, {
       clipPath: 'inset(50% 0% 50% 0%)',
     }, {
       autoAlpha: 1,
       clipPath: 'inset(0% 0% 0% 0%)',
       ease: 'power4.inOut',
-      duration: 2,
+      duration: 1.5,
     })
   })
 
@@ -136,18 +137,17 @@ function onLoad() {
 
   let container = document.querySelector(".reel-video-container .elementor-open-inline")
 
-  function getOrCreateIframe() {
-    const iframe = container.querySelector("iframe")
-    return iframe
+  function getVideo() {
+    const video = container.querySelector("video")
+    return video
   }
 
-  const videos = document.querySelectorAll(".reel-gallery-container .elementor-widget-video")
+  const videos = document.querySelectorAll(".reel-gallery-container .elementor-widget-video .elementor-video")
 
   videos.forEach(el => {
-    const settings = JSON.parse(el.dataset.settings || "{}")
+    const url = el.src
     el.addEventListener("click", () => {
-      const id = settings.youtube_url?.split("v=")?.[1]?.split("&")?.[0]
-      machine.send("PLAY", id)
+      machine.send("PLAY", url)
     })
   })
 }
