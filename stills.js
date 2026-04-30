@@ -2,7 +2,7 @@ gsap.registerPlugin(SplitText)
 
 const breakpoints = {
   tablet: 1024,
-  mobile: 768
+  mobile: 767
 }
 
 function createEventBus() {
@@ -109,10 +109,9 @@ function setupGallery(track) {
 
   let touchStartX = 0
   let touchStartY = 0
-  let touchCurrentX = 0
-  let touchCurrentY = 0
+  let touchCurrent = 0
   let isTouching = false
-  let lockedAxis = null
+  let isDragging = false
 
   const inputStrength = 0.07
   const damping = 0.92
@@ -256,13 +255,12 @@ function setupGallery(track) {
     if (window.innerWidth > breakpoints.tablet) return
 
     isTouching = true
-    lockedAxis = null
+    isDragging = false
 
     touchStartX = e.touches[0].clientX
     touchStartY = e.touches[0].clientY
 
-    touchCurrentX = touchStartX
-    touchCurrentY = touchStartY
+    touchCurrent = axis === "x" ? touchStartX : touchStartY
   }
 
   function onTouchMove(e) {
@@ -271,34 +269,37 @@ function setupGallery(track) {
     const x = e.touches[0].clientX
     const y = e.touches[0].clientY
 
-    const isMobile = window.innerWidth <= breakpoints.mobile
+    const dx = x - touchStartX
+    const dy = y - touchStartY
 
-    if (!lockedAxis) {
-      const dx = Math.abs(x - touchStartX)
-      const dy = Math.abs(y - touchStartY)
+    // ✅ detect intent (only once)
+    if (!isDragging) {
+      const threshold = 6
 
-      lockedAxis = dx > dy ? "x" : "y"
+      if (axis === "x" && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > threshold) {
+        isDragging = true
+      }
 
-      if (isMobile) lockedAxis = "x"
-      else lockedAxis = "y"
+      if (axis === "y" && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > threshold) {
+        isDragging = true
+      }
+
+      // ❌ wrong direction → let browser scroll
+      if (!isDragging) return
     }
 
-    const current = lockedAxis === "x" ? x : y
-    const prev = lockedAxis === "x" ? touchCurrentX : touchCurrentY
+    const current = axis === "x" ? x : y
+    const delta = touchCurrent - current
 
-    const delta = prev - current
-
-    if (lockedAxis === "x") touchCurrentX = x
-    else touchCurrentY = y
+    touchCurrent = current
 
     velocity += delta * inputStrength * 3.2
     machine.send("SCROLL")
   }
 
   function onTouchEnd() {
-    if (!isTouching) return
     isTouching = false
-    lockedAxis = null
+    isDragging = false
   }
 
   document.addEventListener('wheel', onScroll)
