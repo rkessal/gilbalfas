@@ -56,7 +56,11 @@ function waitForImages(container, isMobile) {
     rafImageId = requestAnimationFrame(check)
   }
 
-  check()
+  if (isMobile) {
+    setTimeout(() => {
+      check()
+    }, 500)
+  }
 }
 
 const debounce = (fn, delay) => {
