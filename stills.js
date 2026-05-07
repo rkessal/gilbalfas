@@ -60,6 +60,8 @@ function waitForImages(container, isMobile) {
     setTimeout(() => {
       check()
     }, 500)
+  } else {
+    check()
   }
 }
 
