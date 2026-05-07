@@ -40,6 +40,12 @@ function onLoad() {
     const gallery = '.reel-gallery-container .elementor-widget-wrap'
     const text = '.reel-gallery-container h2'
 
+    const [first, ...thumbnails] = document.querySelectorAll(".reel-gallery-container .elementor-widget-video")
+
+    gsap.set(thumbnails, {
+      filter: 'grayscale(100%)',
+    })
+
     SplitText.create(text, {
       type: "lines, words",
       mask: "lines",
@@ -92,13 +98,19 @@ function onLoad() {
 
   bus.on("video:play", id => {
     const video = container.querySelector("video")
-    console.log({
-      container,
-      video
-    })
     if (!video) return
 
+    const { otherVideos, currentVideo } = getOtherVideos(id)
+
     window.scrollTo({ top: 0 })
+
+    gsap.to(otherVideos, {
+      filter: 'grayscale(100%)',
+    })
+
+    gsap.to(currentVideo, {
+      filter: 'grayscale(0%)',
+    })
 
     gsap.fromTo(video, {
       clipPath: 'inset(50% 0% 50% 0%)',
@@ -140,6 +152,21 @@ function onLoad() {
   function getVideo() {
     const video = container.querySelector("video")
     return video
+  }
+
+  function getOtherVideos(url) {
+    const thumbnails = document.querySelectorAll(".reel-gallery-container .elementor-widget-video")
+    const otherVideos = []
+    let currentVideo
+    thumbnails.forEach(thumbnail => {
+      const video = thumbnail.querySelector("video")
+      if (video.src !== url) {
+        otherVideos.push(thumbnail)
+      } else {
+        currentVideo = thumbnail
+      }
+    })
+    return { otherVideos, currentVideo }
   }
 
   const videos = document.querySelectorAll(".reel-gallery-container .elementor-widget-video .elementor-video")
