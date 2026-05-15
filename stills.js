@@ -131,12 +131,23 @@ function setupGallery(track) {
     },
     scrolling: {
       enter() { },
-      on: { STOP: "snapping" }
+      on: {
+        STOP: "snapping",
+        ANIMATE: "animating"
+      }
     },
     snapping: {
       enter() {
         targetY = getNearestSnap(targetY)
       },
+      on: {
+        DONE: "idle",
+        ANIMATE: "animating"
+      }
+    },
+    animating: {
+      enter() { },
+      leave() { },
       on: { DONE: "idle" }
     }
   }, bus)
@@ -191,6 +202,8 @@ function setupGallery(track) {
     }
   }
 
+  let pendingImage = null
+
   function onUpdateActiveItem(item) {
     const mainDescription = document.querySelector('.stills-description-text')
     const childDescription = mainDescription.firstElementChild
@@ -203,14 +216,29 @@ function setupGallery(track) {
       .backgroundImage
       .match(/url\(["']?([^"']*)["']?\)/)[1]
 
-    if (mainImage.src !== newSrc) {
+    const isSameSrc = mainImage.src === newSrc
+      || mainImage.src === new URL(newSrc, location.href).href
+
+    if (!isSameSrc) {
+
+      if (pendingImage) {
+        pendingImage.onload = null
+        pendingImage = null
+        gsap.killTweensOf(mainImageParent)
+        gsap.killTweensOf(childDescription)
+      }
+
       const newImage = new Image()
       newImage.src = newSrc
+      pendingImage = newImage
+
+      machine.send("ANIMATE")
 
       gsap.set(mainImage, { clipPath: 'inset(0% 0% 0% 0%)' })
       gsap.set(newImage, { scale: 1.05 })
 
       newImage.onload = () => {
+        if (pendingImage !== newImage) return
         gsap.to(childDescription, { autoAlpha: 0 })
         gsap.to(mainImageParent, {
           opacity: 0,
@@ -220,7 +248,7 @@ function setupGallery(track) {
           onComplete: () => {
             gsap.to(childDescription, { autoAlpha: 1 })
 
-            mainImage.remove()
+            mainImageParent.querySelectorAll('img').forEach(img => img.remove())
             mainImageParent.appendChild(newImage)
 
             gsap.fromTo(mainImageParent, {
@@ -241,6 +269,7 @@ function setupGallery(track) {
 
             childDescription.innerHTML = `<p>${newDescription}</p>`
             gsap.to(childDescription, { autoAlpha: 1 })
+            machine.send("DONE")
           }
         })
       }
@@ -253,6 +282,7 @@ function setupGallery(track) {
   }
 
   function onScroll(e) {
+    if (machine.state === "animating") return
     velocity += e.deltaY * inputStrength
     machine.send("SCROLL")
   }
@@ -270,7 +300,7 @@ function setupGallery(track) {
   }
 
   function onTouchMove(e) {
-    if (!isTouching) return
+    if (!isTouching || machine.state === "animating") return
 
     const x = e.touches[0].clientX
     const y = e.touches[0].clientY
